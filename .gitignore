@@ -1,0 +1,10 @@
+# Gemerkte Ansicht, Fenstergrößen, Sprache – gehört zum Rechner, nicht ins Repo
+einstellungen.json
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Editoren
+.idea/
+.vscode/

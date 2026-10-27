@@ -1,0 +1,5 @@
+# Zeilenenden festnageln: die Batchdatei braucht CRLF, der Rest LF
+* text=auto
+*.bat text eol=crlf
+*.pyw text eol=lf
+*.md text eol=lf
