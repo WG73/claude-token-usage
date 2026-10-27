@@ -6,6 +6,8 @@ A small desktop window showing the same numbers as `/usage` in Claude Code —
 plus a pacing marker that tells you whether you are spending your weekly limit
 evenly or too fast.
 
+![The window in its full view](docs/screenshot-en.png)
+
 ## Running it
 
 Double-click `Claude Token Usage.bat` (or `claude_usage.pyw` directly).

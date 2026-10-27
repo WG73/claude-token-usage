@@ -2,7 +2,10 @@
 
 *Deutsch · [English](README.en.md)*
 
-Kleines Desktop-Fenster, das dieselben Zahlen zeigt wie `/usage` in Claude Code.
+Kleines Desktop-Fenster, das dieselben Zahlen zeigt wie `/usage` in Claude Code –
+mit einer Soll-Marke, die zeigt, ob das Wochenlimit gleichmäßig verbraucht wird.
+
+![Die Vollansicht des Fensters](docs/screenshot-de.png)
 
 ## Starten
 
