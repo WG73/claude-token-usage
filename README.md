@@ -24,7 +24,12 @@ weitere Sprache kostet eine Spalte dort und einen Eintrag in `SPRACHEN`.
 ## Zwei Ansichten
 
 * **Vollansicht** – alle Limits, Aufteilung der Woche und die Tokenaufstellung.
-* **Kompakt** – nur das 5-Stunden-Limit, groß, mit Verbrauch und Restschätzung.
+* **Kompakt** – das 5-Stunden-Limit groß, darunter der Wochenbalken mit
+  Tagesraster und Soll-Marke, dazu die verarbeiteten Tokens und die
+  Restschätzung. Countdown und Soll-Ist-Vergleich der Woche stehen in der
+  Vollansicht.
+
+![Die Kompaktansicht](docs/screenshot-kompakt-de.png)
 
 Umschalten über das Häkchen **Kompakt** oben links oder per Doppelklick ins Fenster.
 Daneben liegt **Vordergrund** (Fenster bleibt über anderen), rechts der Stand der
@@ -72,7 +77,7 @@ sekündlich mit der Uhr weiter; springt das Fenster um, fängt die Marke wieder 
 an. Die Rasterweite richtet sich nach der tatsächlichen Fensterlänge aus der API,
 sieben Tage sind nur der Rückfall.
 
-**Verbrauchte Tokens** – die API nennt nur Prozentwerte, keine Tokenzahlen. Die
+**Verarbeitete Tokens** – die API nennt nur Prozentwerte, keine Tokenzahlen. Die
 tatsächlichen Zahlen werden deshalb aus den lokalen Transcript-Dateien
 (`~/.claude/projects/**/*.jsonl`) ausgezählt, gefiltert auf genau die Zeitfenster
 der beiden Limits. Berücksichtigt werden sowohl das Windows-Verzeichnis
@@ -80,7 +85,13 @@ der beiden Limits. Berücksichtigt werden sowohl das Windows-Verzeichnis
 WSL-Distributionen. Mehrfach vorkommende Nachrichten (Fork, Kompaktierung) werden
 über die Message-ID nur einmal gezählt.
 
-`Rest ca.` rechnet aus verbrauchten Tokens und Auslastung hoch, wie viel im Fenster
+`Verarbeitet` zählt Eingabe, Ausgabe und das Anlegen des Caches. Die
+Cache-Lesevorgänge stehen in einer eigenen Zeile und bleiben aus dieser Summe
+heraus: Sie lesen denselben Kontext bei jeder Nachricht erneut, wachsen damit
+allein durch die Länge einer Sitzung und würden die Summe sonst beherrschen –
+in die Limits gehen sie nur zu einem Bruchteil ein.
+
+`Rest ca.` rechnet aus verarbeiteten Tokens und Auslastung hoch, wie viel im Fenster
 noch übrig ist. Das ist eine Schätzung: In die Limits fließt auch Nutzung außerhalb
 von Claude Code ein (siehe Aufteilung nach Anwendung), die lokal nicht sichtbar ist.
 

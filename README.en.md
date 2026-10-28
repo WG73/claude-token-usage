@@ -26,7 +26,12 @@ column there and one entry in `SPRACHEN`.
 ## Two views
 
 * **Full** – every limit, the week split by app, and the token breakdown.
-* **Compact** – the 5-hour limit only, large, with usage and remaining estimate.
+* **Compact** – the 5-hour limit in large type, below it the weekly bar with
+  its day grid and target mark, plus tokens processed and the remaining
+  estimate. The weekly countdown and the pacing comparison live in the full
+  view.
+
+![The compact view](docs/screenshot-kompakt-en.png)
 
 Switch with the **Compact** checkbox at the top left or by double-clicking the
 window. Next to it sits **On top**; the right edge shows when the data was last
@@ -73,12 +78,17 @@ the window rolls over, the marker starts at the left again. The grid spacing
 follows the actual window length reported by the API — seven days is only the
 fallback.
 
-**Tokens used** – the API reports percentages only, never token counts. The
+**Tokens processed** – the API reports percentages only, never token counts. The
 actual numbers are therefore counted from the local transcript files
 (`~/.claude/projects/**/*.jsonl`), filtered to exactly the two limit windows.
 Both the Windows directory `%USERPROFILE%\.claude` and the `.claude` directories
 of every installed WSL distribution are included. Messages appearing more than
 once (forks, compaction) are counted once, keyed by message ID.
+
+`Processed` counts input, output and cache writes. Cache reads have a line of
+their own and stay out of that total: they re-read the same context with every
+message, so they grow with the length of a session alone and would dominate the
+total — and they count towards the limits only at a fraction.
 
 `Est. left` extrapolates from tokens counted and utilization reported how much
 is left in the window. It is an estimate: the limits also include usage outside

@@ -9,9 +9,11 @@ Zeigt:
   * Beim Wochenlimit zusätzlich ein Raster der sieben Tage und eine Soll-Marke:
     der zeitlich anteilige Verbrauch (100 %/7 je Tag), der gleichmäßig bis zum
     Reset reicht, samt Abstand dazu in Prozentpunkten.
-  * Tatsächlich verbrauchte Tokens je Modell, ausgezählt aus den lokalen
+  * Tatsächlich verarbeitete Tokens je Modell, ausgezählt aus den lokalen
     Transcript-Dateien (~/.claude/projects/**/*.jsonl), gefiltert auf genau die
-    Zeitfenster der beiden Limits.
+    Zeitfenster der beiden Limits. Gezählt werden Eingabe, Ausgabe und das
+    Anlegen des Caches; die Cache-Lesevorgänge stehen separat, weil sie
+    denselben Kontext immer wieder lesen und die Summe sonst beherrschen.
 
 Der Zugriffstoken wird aus der Anmeldedatei von Claude Code gelesen und
 ausschließlich an api.anthropic.com gesendet.
@@ -87,8 +89,8 @@ TEXTE = {
 	# Kartenüberschriften
 	"karte_limits":     ("NUTZUNGSLIMITS", "USAGE LIMITS"),
 	"karte_verteilung": ("WOCHE NACH ANWENDUNG", "WEEK BY APP"),
-	"karte_tokens":     ("VERBRAUCHTE TOKENS (lokale Transcripts)",
-	                     "TOKENS USED (local transcripts)"),
+	"karte_tokens":     ("VERARBEITETE TOKENS (lokale Transcripts)",
+	                     "TOKENS PROCESSED (local transcripts)"),
 	# Beschriftungen der Limits
 	"limit_session":    ("Sitzung (5 Stunden)", "Session (5 hours)"),
 	"limit_weekly":     ("Woche (alle Modelle)", "Week (all models)"),
@@ -117,11 +119,11 @@ TEXTE = {
 	"spalte_ein":       ("ein", "in"),
 	"spalte_aus":       ("aus", "out"),
 	"cache_lesen":      ("Cache-Lesen", "Cache reads"),
-	"verbraucht":       ("Verbraucht", "Used"),
+	"verarbeitet":      ("Verarbeitet", "Processed"),
 	"rest_ca":          ("Rest ca.", "Est. left"),
 	"keine_daten":      ("keine Daten", "no data"),
 	"zusatzguthaben":   ("Zusatzguthaben: %d %% verbraucht", "Extra usage: %d %% used"),
-	"kompakt_verbrauch": ("%s Tokens verbraucht", "%s tokens used"),
+	"kompakt_verbrauch": ("%s Tokens verarbeitet", "%s tokens processed"),
 	"kompakt_rest":     ("noch ca. %s", "approx. %s left"),
 	# Kurzformen großer Zahlen
 	"anzahl_mrd":       ("%s Mrd", "%sB"),
@@ -403,8 +405,17 @@ def formatiere_restzeit(ziel):
 
 
 def summe_tokens(je_modell):
-	"""Alle Tokenarten eines Zeitfensters über alle Modelle aufsummieren."""
-	return sum(sum(werte.values()) for werte in je_modell.values())
+	"""
+	Tokens eines Zeitfensters über alle Modelle aufsummieren.
+
+	Ohne die Cache-Lesevorgänge: Sie lesen denselben Kontext bei jeder
+	Nachricht erneut und wachsen daher mit der Länge einer Sitzung, ohne dass
+	mehr Arbeit anfällt – in die Limits gehen sie nur zu einem Bruchteil ein.
+	Gezählt wird also, was neu verarbeitet wurde: Eingabe, Ausgabe und das
+	Anlegen des Caches. Die Lesevorgänge stehen in der Vollansicht separat.
+	"""
+	return sum(sum(werte.get(feld, 0) for feld in ("input", "output", "cache_write"))
+	           for werte in je_modell.values())
 
 
 def modellname(kennung):
@@ -427,23 +438,28 @@ class Limitbalken(tk.Frame):
 	"""Eine Zeile: Beschriftung, Fortschrittsbalken, Prozent und Reset-Countdown."""
 
 	def __init__(self, master, beschriftung, titel_font=None, wert_font=None,
-	             fuss_font=None, hoehe=10, **kwargs):
+	             fuss_font=None, hoehe=10, knapp=False, nur_balken=False, **kwargs):
 		super().__init__(master, bg=FARBEN["karte"], **kwargs)
 		self.reset_zeitpunkt = None
 		self.hoehe = hoehe
+		# knapp: ohne den Luftrand, den Labels von Haus aus mitbringen.
+		# nur_balken: Beschriftung, Wert und Balken, sonst nichts – Countdown
+		# und Soll-Ist-Vergleich stehen dann nur in der Vollansicht.
+		self.nur_balken = nur_balken
+		eng = {"pady": 0, "bd": 0} if knapp else {}
 
 		kopf = tk.Frame(self, bg=FARBEN["karte"])
 		kopf.pack(fill="x")
 		self.titel = tk.Label(kopf, text=beschriftung, bg=FARBEN["karte"],
-		                      fg=FARBEN["text"], anchor="w", font=titel_font)
+		                      fg=FARBEN["text"], anchor="w", font=titel_font, **eng)
 		self.titel.pack(side="left")
 		self.prozent = tk.Label(kopf, text="--", bg=FARBEN["karte"],
-		                        fg=FARBEN["text"], anchor="e", font=wert_font)
+		                        fg=FARBEN["text"], anchor="e", font=wert_font, **eng)
 		self.prozent.pack(side="right")
 
 		self.balken = tk.Canvas(self, height=hoehe, bg=FARBEN["spur"],
 		                        highlightthickness=0, bd=0)
-		self.balken.pack(fill="x", pady=(4, 2))
+		self.balken.pack(fill="x", pady=(3, 1) if knapp else (4, 2))
 		self.fuellung = self.balken.create_rectangle(0, 0, 0, hoehe,
 		                                             fill=FARBEN["gruen"], width=0)
 		# Gerastertes Segment für den lokal fortgeschriebenen Zuwachs.
@@ -459,11 +475,14 @@ class Limitbalken(tk.Frame):
 		self.balken.bind("<Configure>", lambda _e: self._zeichne())
 
 		self.fuss = tk.Label(self, text="", bg=FARBEN["karte"],
-		                     fg=FARBEN["text_grau"], anchor="w", font=fuss_font)
-		self.fuss.pack(fill="x")
+		                     fg=FARBEN["text_grau"], anchor="w", font=fuss_font,
+		                     **eng)
+		if not nur_balken:
+			self.fuss.pack(fill="x")
 		# Zweite Fußzeile, nur bei gesetzter Marke sichtbar: Abstand zum Plan.
 		self.plan = tk.Label(self, text="", bg=FARBEN["karte"],
-		                     fg=FARBEN["text_grau"], anchor="w", font=fuss_font)
+		                     fg=FARBEN["text_grau"], anchor="w", font=fuss_font,
+		                     **eng)
 		self._wert = 0.0
 		self._berechnet = None
 		self._marke = None
@@ -523,7 +542,7 @@ class Limitbalken(tk.Frame):
 		die Marke, die ein gleichmäßiger Verbrauch jetzt gerade erreicht hätte.
 		Dazu, wie viel pro Tag noch bleibt, wenn der Rest gleichmäßig verteilt wird.
 		"""
-		if self._marke is None:
+		if self._marke is None or self.nur_balken:
 			if self.plan.winfo_manager():
 				self.plan.pack_forget()
 			return
@@ -647,6 +666,9 @@ class UsageFenster(tk.Tk):
 		self.f_klein = tkfont.Font(family=familie, size=8)
 		self.f_titel = tkfont.Font(family=familie, size=11, weight="bold")
 		self.f_gross = tkfont.Font(family=familie, size=20, weight="bold")
+		# Prozentwert der Kompaktansicht: hervorgehoben, aber so flach, dass
+		# darunter noch der Wochenbalken Platz hat
+		self.f_mittel = tkfont.Font(family=familie, size=14, weight="bold")
 		self.f_mono = tkfont.Font(family="Consolas" if os.name == "nt" else "DejaVu Sans Mono",
 		                          size=9)
 		self.option_add("*Font", self.f_normal)
@@ -782,21 +804,33 @@ class UsageFenster(tk.Tk):
 		self.token_text.pack(fill="x")
 
 	def _baue_kompaktansicht(self, aussen):
-		"""Nur das 5-Stunden-Limit, groß und ohne Beiwerk."""
-		karte = tk.Frame(aussen, bg=FARBEN["karte"], padx=10, pady=2)
+		"""
+		Das 5-Stunden-Limit groß, darunter der Wochenbalken mit Tagesraster
+		und Soll-Marke – knapp beschriftet, damit die Fensterhöhe reicht.
+		Countdown und Soll-Ist-Vergleich der Woche stehen in der Vollansicht.
+		"""
+		karte = tk.Frame(aussen, bg=FARBEN["karte"], padx=10, pady=3)
 		karte.pack(fill="both", expand=True)
 
 		balken = Limitbalken(karte, t("limit_session"),
-		                     titel_font=self.f_klein, wert_font=self.f_gross,
-		                     fuss_font=self.f_klein, hoehe=14)
+		                     titel_font=self.f_klein, wert_font=self.f_mittel,
+		                     fuss_font=self.f_klein, hoehe=12, knapp=True)
 		balken.pack(fill="x")
 		self.balken["session_kompakt"] = balken
 		self._balken_texte["session_kompakt"] = "limit_session"
 
+		woche = Limitbalken(karte, t("wahl_weekly"),
+		                    titel_font=self.f_klein, wert_font=self.f_klein,
+		                    fuss_font=self.f_klein, hoehe=10,
+		                    knapp=True, nur_balken=True)
+		woche.pack(fill="x", pady=(4, 0))
+		self.balken["weekly_kompakt"] = woche
+		self._balken_texte["weekly_kompakt"] = "wahl_weekly"
+
 		self.kompakt_rest = tk.Label(karte, text="", bg=FARBEN["karte"],
 		                             fg=FARBEN["text_grau"], anchor="w",
-		                             font=self.f_klein)
-		self.kompakt_rest.pack(fill="x", pady=(2, 0))
+		                             font=self.f_klein, pady=0, bd=0)
+		self.kompakt_rest.pack(fill="x", pady=(3, 0))
 
 	def _baue_fusszeile(self, aussen):
 		"""Nur in der Vollansicht; kompakt genügt der 5-Minuten-Takt bzw. F5."""
@@ -964,11 +998,11 @@ class UsageFenster(tk.Tk):
 
 	def _hoehe_anpassen(self):
 		"""
-		Die Vollansicht nie kleiner zeigen, als der Inhalt braucht: Tokenliste
+		Das Fenster nie kleiner zeigen, als der Inhalt braucht: Tokenliste
 		und Planzeile wachsen erst mit den Daten, die untere Zeile wäre sonst
 		abgeschnitten. Nur vergrößern – eine größere Wunschhöhe bleibt erhalten.
 		"""
-		if self.kompakt or not self.winfo_ismapped():
+		if not self.winfo_ismapped():
 			return
 		self.update_idletasks()
 		noetig = self.winfo_reqheight()
@@ -1120,6 +1154,7 @@ class UsageFenster(tk.Tk):
 		return tage if 2 <= tage <= 31 else 7
 
 	def _ist_wochenbalken(self, name):
+		name = name.removesuffix("_kompakt")
 		return name == "weekly" or name.startswith("seven_day")
 
 	def _aktualisiere_balken(self):
@@ -1153,10 +1188,10 @@ class UsageFenster(tk.Tk):
 			                                         t("spalte_ein"),
 			                                         formatiere_anzahl(werte["output"]),
 			                                         t("spalte_aus")))
-		gesamt = summe["input"] + summe["output"] + summe["cache_read"] + summe["cache_write"]
+		gesamt = summe["input"] + summe["output"] + summe["cache_write"]
 		zeilen.append("")
 		zeilen.append("%-11s %9s" % (t("cache_lesen"), formatiere_anzahl(summe["cache_read"])))
-		zeilen.append("%-11s %9s" % (t("verbraucht"), formatiere_anzahl(gesamt)))
+		zeilen.append("%-11s %9s" % (t("verarbeitet"), formatiere_anzahl(gesamt)))
 
 		# Das Limit selbst wird nur in Prozent veröffentlicht. Aus dem gezählten
 		# Verbrauch lässt sich der Rest hochrechnen – eine Schätzung, weil in die
@@ -1177,7 +1212,7 @@ class UsageFenster(tk.Tk):
 			return
 
 		je_modell = getattr(self, "tokens", {}).get("session", {})
-		gesamt = sum(sum(werte.values()) for werte in je_modell.values())
+		gesamt = summe_tokens(je_modell)
 		prozent = self._berechne_prozent("session") or getattr(self, "prozente", {}).get("session")
 		zeilen = []
 		if gesamt:
