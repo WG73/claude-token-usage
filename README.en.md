@@ -10,9 +10,19 @@ evenly or too fast.
 
 ## Running it
 
-Double-click `Claude Token Usage.bat` (or `claude_usage.pyw` directly).
-Needs Python 3 with Tkinter on Windows. No other dependencies — one file,
+**Windows:** double-click `Claude Token Usage.bat` (or `claude_usage.pyw`
+directly). Needs Python 3 with Tkinter.
+
+**Linux and WSL:** `./claude-token-usage.sh` starts the window in the background
+(or `python3 claude_usage.pyw`). Needs Python 3.9 or newer with Tkinter; on
+Debian/Ubuntu `sudo apt install python3-tk`. Under WSL the window is displayed by
+WSLg (Windows 11 or a current WSL 2). No other dependencies — one file,
 standard library only.
+
+On Linux the window looks like this (DejaVu fonts instead of Segoe UI):
+
+![Full view on Linux/WSL](docs/screenshot-linux-en.png)
+![Compact view on Linux/WSL](docs/screenshot-linux-kompakt-en.png)
 
 ## Language
 
@@ -81,8 +91,9 @@ fallback.
 **Tokens processed** – the API reports percentages only, never token counts. The
 actual numbers are therefore counted from the local transcript files
 (`~/.claude/projects/**/*.jsonl`), filtered to exactly the two limit windows.
-Both the Windows directory `%USERPROFILE%\.claude` and the `.claude` directories
-of every installed WSL distribution are included. Messages appearing more than
+Both sides are covered: on Windows the directory `%USERPROFILE%\.claude` and the
+`.claude` directories of every installed WSL distribution; under WSL its own
+`~/.claude` and the Windows directories at `/mnt/<drive>/Users/*/.claude`. Messages appearing more than
 once (forks, compaction) are counted once, keyed by message ID.
 
 `Processed` counts input, output and cache writes. Cache reads have a line of
@@ -97,7 +108,7 @@ Claude Code (see the split by app), which is invisible locally.
 ## Credentials
 
 The access token is read from Claude Code's `.credentials.json`; with several
-installations the most recently refreshed one wins. It is sent to
+installations (Windows and WSL) the most recently refreshed one wins. It is sent to
 `api.anthropic.com` and nowhere else, and is never displayed or stored. If the
 window reports an expired token, starting Claude Code once is enough.
 

@@ -9,8 +9,19 @@ mit einer Soll-Marke, die zeigt, ob das Wochenlimit gleichmäßig verbraucht wir
 
 ## Starten
 
-Doppelklick auf `Claude Token Usage.bat` (oder direkt auf `claude_usage.pyw`).
-Voraussetzung: Python 3 mit Tkinter unter Windows.
+**Windows:** Doppelklick auf `Claude Token Usage.bat` (oder direkt auf
+`claude_usage.pyw`). Voraussetzung: Python 3 mit Tkinter.
+
+**Linux und WSL:** `./claude-token-usage.sh` startet das Fenster im Hintergrund
+(oder `python3 claude_usage.pyw`). Voraussetzung: Python 3.9 oder neuer mit
+Tkinter, unter Debian/Ubuntu `sudo apt install python3-tk`. Unter WSL zeigt
+WSLg das Fenster an (Windows 11 oder aktuelles WSL 2). Weitere Abhängigkeiten
+gibt es nicht – eine Datei, nur die Standardbibliothek.
+
+Unter Linux sieht das Fenster so aus (Schrift DejaVu statt Segoe UI):
+
+![Vollansicht unter Linux/WSL](docs/screenshot-linux-de.png)
+![Kompaktansicht unter Linux/WSL](docs/screenshot-linux-kompakt-de.png)
 
 ## Sprache
 
@@ -80,9 +91,10 @@ sieben Tage sind nur der Rückfall.
 **Verarbeitete Tokens** – die API nennt nur Prozentwerte, keine Tokenzahlen. Die
 tatsächlichen Zahlen werden deshalb aus den lokalen Transcript-Dateien
 (`~/.claude/projects/**/*.jsonl`) ausgezählt, gefiltert auf genau die Zeitfenster
-der beiden Limits. Berücksichtigt werden sowohl das Windows-Verzeichnis
-`%USERPROFILE%\.claude` als auch die `.claude`-Verzeichnisse in allen installierten
-WSL-Distributionen. Mehrfach vorkommende Nachrichten (Fork, Kompaktierung) werden
+der beiden Limits. Berücksichtigt werden beide Seiten: Unter Windows das
+Verzeichnis `%USERPROFILE%\.claude` und die `.claude`-Verzeichnisse in allen
+installierten WSL-Distributionen, unter WSL das eigene `~/.claude` und die
+Windows-Verzeichnisse unter `/mnt/<laufwerk>/Users/*/.claude`. Mehrfach vorkommende Nachrichten (Fork, Kompaktierung) werden
 über die Message-ID nur einmal gezählt.
 
 `Verarbeitet` zählt Eingabe, Ausgabe und das Anlegen des Caches. Die
@@ -98,7 +110,7 @@ von Claude Code ein (siehe Aufteilung nach Anwendung), die lokal nicht sichtbar 
 ## Anmeldung
 
 Der Zugriffstoken wird aus `.credentials.json` von Claude Code gelesen; bei mehreren
-Installationen gilt der zuletzt erneuerte. Er wird ausschließlich an
+Installationen (Windows und WSL) gilt der zuletzt erneuerte. Er wird ausschließlich an
 `api.anthropic.com` gesendet und nirgends angezeigt oder gespeichert. Meldet das
 Fenster einen abgelaufenen Token, genügt es, Claude Code einmal zu starten.
 

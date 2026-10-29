@@ -2,4 +2,5 @@
 * text=auto
 *.bat text eol=crlf
 *.pyw text eol=lf
+*.sh text eol=lf
 *.md text eol=lf

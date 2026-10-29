@@ -23,6 +23,7 @@ Kopfzeile; die Texte stehen in TEXTE, die Wahl wird in einstellungen.json
 gemerkt.
 """
 
+import glob
 import json
 import os
 import queue
@@ -218,7 +219,7 @@ def wsl_distributionen():
 
 
 def claude_verzeichnisse():
-	"""Alle in Frage kommenden .claude-Verzeichnisse (Windows und WSL)."""
+	"""Alle in Frage kommenden .claude-Verzeichnisse (Windows, WSL und Linux)."""
 	kandidaten = []
 	heim = os.path.expanduser("~")
 	if heim:
@@ -238,6 +239,11 @@ def claude_verzeichnisse():
 					if os.path.isdir(pfad):
 						kandidaten.append(os.path.normpath(pfad))
 				break     # Distribution erreichbar, zweite Schreibweise unnötig
+
+	# Umgekehrt unter WSL: die Windows-Laufwerke liegen unter /mnt/<laufwerk>.
+	elif os.path.isdir("/mnt"):
+		for pfad in sorted(glob.glob("/mnt/*/Users/*/.claude")):
+			kandidaten.append(pfad)
 
 	# Duplikate entfernen, Reihenfolge beibehalten
 	gesehen, ergebnis = set(), []
